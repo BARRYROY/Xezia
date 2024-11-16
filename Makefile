@@ -1,6 +1,6 @@
 CC = gcc
 LDFLAGS = -L/opt/homebrew/Cellar/sdl2/2.30.8/lib -lSDL2
-CFLAGS = -Wall -Wextra -std=c11 -pedantic -I/opt/homebrew/Cellar/sdl2/2.30.8/include 
+CFLAGS = -g -Wall -Wextra -std=c11 -pedantic -I/opt/homebrew/Cellar/sdl2/2.30.8/include 
 SRC_DIR = src
 SRC_FILES = $(wildcard $(SRC_DIR)/*.c)
 OBJ_FILES = $(SRC_FILES:.c=.o)
@@ -8,7 +8,7 @@ OUTPUT = xezia
 
 
 # rules for compiling .c to xezia
-$(OUTPUT): $(SOURCE)
+$(OUTPUT): $(SRC_FILES)
 	$(CC) $(CFLAGS) -o $(OUTPUT) $(SRC_FILES) $(LDFLAGS)
 # rules for compiling .c to .o
 .c.o: 
