@@ -2,4 +2,7 @@
 Snake Game using SDL library
 
 # Run 
-make
+make run
+
+#TODO
+make it cross platform 

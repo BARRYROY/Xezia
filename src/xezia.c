@@ -1,61 +1,4 @@
-#include <stdio.h>
-#include "/opt/homebrew/Cellar/sdl2/2.30.8/include/SDL2/SDL.h"
-#include <time.h>
-
-#if 0
-#define SCREEN_WIDTH 1200
-#define SCREEN_HEIGHT 900
-#define SCREEN_X 0
-#define SCREEN_Y 0
-#else
-#define SCREEN_WIDTH 1000
-#define SCREEN_HEIGHT 1000
-#define SCREEN_X 0
-#define SCREEN_Y 0
-#endif
-
-#define GRID_SIZE 20
-#define GRID_DIM 500
-#define CELL_SIZE (GRID_DIM / GRID_SIZE)
-
-typedef struct snake{
-    int x;
-    int y;
-    int dir;
-    struct snake* next;
-}Snake;
-
-typedef struct ball{
-    int x;
-    int y;
-}Ball;
-
-Ball newBall;
-typedef Snake* snakePtr;
-
-snakePtr head;
-snakePtr tail;
-
-
-enum{
-    SNAKE_UP,
-    SNAKE_DOWN,
-    SNAKE_RIGHT,
-    SNAKE_LEFT,
-    
-}Direction;
-
-#define NUM_DIRECTION sizeof(Direction);
-
-
-void init_snake();
-void increase_snake();
-void render_grid(SDL_Renderer* renderer, int x, int y, int dim );
-void render_snake(SDL_Renderer* renderer, int x, int y, int scale_factor );
-void move_snake();
-void draw_apple(SDL_Renderer* renderer, int x, int y, int scale_factor);
-void gen_apple();
-void detect_apple();
+#include "xezia.h"
 
 int main(){
 
@@ -115,7 +58,7 @@ int main(){
     int grid_y  = 0;
     grid_x  = ((drawable_width / 2) - ((GRID_DIM * scale_x) / 2)) ;
     grid_y = ((drawable_height / 2) - ((GRID_DIM * scale_x) / 2)) ;
-    int grid_dim_scaled = GRID_DIM * scale_x;
+    //int grid_dim_scaled = GRID_DIM * scale_x; keeping this if i might need it
 
     printf("scale_x, scale y -> (%f, %f) \n grid_x, grid_y -> (%d, %d)\n", scale_x, scale_y, grid_x, grid_y);
 
@@ -123,8 +66,6 @@ int main(){
     int quit = 0;
 
     while(!quit){
-        printf("Game is running...\n");
-
         while(SDL_PollEvent(&event)){    
             switch(event.type){
                 case SDL_QUIT:
@@ -173,6 +114,8 @@ int main(){
         move_snake();
 
         detect_apple();
+        
+        detect_crash();
 
         SDL_RenderClear(render);
 
@@ -182,13 +125,13 @@ int main(){
 
         render_snake(render, grid_x, grid_y, scale_x);
 
-        draw_apple(render, grid_x, grid_x, scale_x);
+        render_apple(render, grid_x, grid_x, scale_x); 
 
         SDL_SetRenderDrawColor(render, 0x00, 0x00, 0x00, 0x00);
 
         SDL_RenderPresent(render);
 
-        SDL_Delay(150);
+        SDL_Delay(95);
 
     }
 
@@ -212,19 +155,27 @@ int main(){
 
 void render_grid(SDL_Renderer* renderer, int x, int y, int scale_factor){
     
-    SDL_SetRenderDrawColor(renderer, 0x55, 0x55, 0x55, 0x55);
+    SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0x00, 0xFF); //0x55, 0x55, 0x55, 0x55);
+#if 0    
     SDL_Rect cell;
     cell.h = CELL_SIZE * scale_factor;
     cell.w = CELL_SIZE * scale_factor;
 
     for(int i = 0; i < GRID_SIZE ; i++){
         for(int j = 0; j < GRID_SIZE; j++){
-            cell.x = x + (i * CELL_SIZE) * scale_factor;
-            cell.y = y + (j * CELL_SIZE) * scale_factor;
+            cell.x = x + (i * CELL_SIZE * scale_factor);
+            cell.y = y + (j * CELL_SIZE * scale_factor);
             SDL_RenderDrawRect(renderer, &cell);
         }
     }
-
+#else
+    SDL_Rect grid;
+    grid.h = GRID_DIM * scale_factor;
+    grid.w = GRID_DIM * scale_factor;
+    grid.x = x;
+    grid.y = y;
+    SDL_RenderDrawRect(renderer, &grid);
+#endif
 }
 
 void init_snake(){
@@ -245,7 +196,8 @@ void increase_snake(){
         exit(EXIT_FAILURE);
     }
     new->x = tail->x;
-    new->y = tail->y - 1;
+    new->y = tail->y;
+    //new->y = tail->y - 1;
     new->dir = tail->dir;
     new->next = NULL;
     tail->next = new;
@@ -308,29 +260,79 @@ void move_snake(){
 }
 
 
-void gen_apple(){
+void gen_apple( ){
+    //we want to never generate the ball inside the snake
+    bool in_loop = true;
+    while(in_loop){
+        newBall.x= rand() % GRID_SIZE ;
+        newBall.y = rand() % GRID_SIZE ;
 
-    newBall.x= rand() % GRID_SIZE ;
-    newBall.y = rand() % GRID_SIZE;
+        snakePtr current = head;
+        in_loop = false;
+
+        while (current != NULL)
+        {
+            if(current->x == newBall.x && current->y == newBall.y){
+                in_loop = true;
+                break;
+            }
+            current = current->next;
+        }
+        
+    }
+    
 
 }
 
-void draw_apple(SDL_Renderer* renderer, int x, int y, int scale_factor){
-    SDL_SetRenderDrawColor(renderer, 0xff, 0x00, 0x00, 255);
-    //gen_apple();
+void render_apple(SDL_Renderer* renderer, int x, int y, int scale_factor){
+    //it will be nice to generate colors randomly 
+    // Generate random RGB values (0-255)
+    Uint8 r = 0xFF; 
+    Uint8 g = 0x00; 
+    Uint8 b = 0x00; 
+    Uint8 a = 0xFF;        
+
+    SDL_SetRenderDrawColor(renderer, r, g, b, a);
     SDL_Rect ball;
-    ball.x = x + (newBall.x * CELL_SIZE) * scale_factor;
-    ball.y = y + (newBall.y * CELL_SIZE) * scale_factor;
+    ball.x = x + (newBall.x * CELL_SIZE * scale_factor);
+    ball.y = y + (newBall.y * CELL_SIZE * scale_factor);
     ball.h = CELL_SIZE * scale_factor;
     ball.w = CELL_SIZE * scale_factor;
 
     SDL_RenderFillRect(renderer, &ball);
+
 }
 
 void detect_apple(){
 
-    if( (head->x == newBall.x ) &&(head->y = newBall.y)){
+    if( (head->x == newBall.x ) &&(head->y == newBall.y)){ //asssignment ! comparison was the bug distorting the game we are now good
         gen_apple();
         increase_snake();
     }
+}
+
+
+void detect_crash(){
+
+    if(head->x < 0 || head->x >= GRID_SIZE || head-> y < 0 || head->y >= GRID_SIZE){
+        reset_snake();
+
+    }
+}
+
+void reset_snake(){
+
+    snakePtr track = head;
+    snakePtr temp;
+
+    while(track != NULL){
+        temp = track->next;
+        track = track->next;
+        free(temp);
+    }
+
+    init_snake();
+    increase_snake();
+    increase_snake();
+    gen_apple();
 }
