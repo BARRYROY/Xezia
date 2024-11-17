@@ -15,7 +15,7 @@
 #endif
 
 #define GRID_SIZE 20
-#define GRID_DIM 650
+#define GRID_DIM 500
 #define CELL_SIZE (GRID_DIM / GRID_SIZE)
 
 typedef struct snake{
@@ -43,14 +43,17 @@ enum{
     SNAKE_RIGHT,
     SNAKE_LEFT,
     
-};
+}Direction;
+
+#define NUM_DIRECTION sizeof(Direction);
+
 
 void init_snake();
 void increase_snake();
-void render_grid(SDL_Renderer* renderer, int x, int y);
-void render_snake();
+void render_grid(SDL_Renderer* renderer, int x, int y, int dim );
+void render_snake(SDL_Renderer* renderer, int x, int y, int scale_factor );
 void move_snake();
-void draw_apple(SDL_Renderer* renderer, int x, int y);
+void draw_apple(SDL_Renderer* renderer, int x, int y, int scale_factor);
 void gen_apple();
 void detect_apple();
 
@@ -72,14 +75,24 @@ int main(){
     SDL_Renderer* render;
 
     window=SDL_CreateWindow("Xezia",
-                            SCREEN_X, SCREEN_Y,
+                            SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                             SCREEN_WIDTH, SCREEN_HEIGHT,
-                            SDL_WINDOW_BORDERLESS 
+                            SDL_WINDOW_BORDERLESS |SDL_WINDOW_ALLOW_HIGHDPI 
                             );
     if(!window){
         printf("ERROR! Failed to create window : %s.\n", SDL_GetError());
         return 1;
     }
+
+    int drawable_width, drawable_height;
+    SDL_GL_GetDrawableSize(window, &drawable_width, &drawable_height);
+
+    printf("drawable screen size is (%d, %d) \n", drawable_width, drawable_height);
+
+    float scale_x = (float)drawable_width / SCREEN_WIDTH;
+    float scale_y = (float)drawable_height / SCREEN_HEIGHT;
+
+    printf(" defined screen size is (%d, %d) \n", SCREEN_WIDTH, SCREEN_HEIGHT);
 
     render = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
@@ -98,8 +111,13 @@ int main(){
 
     SDL_Delay(3000);
 
-    int grid_x = (SCREEN_WIDTH / 2) - (GRID_DIM /2);
-    int grid_y = (SCREEN_HEIGHT / 2) - (GRID_DIM /2);
+    int grid_x = 0;
+    int grid_y  = 0;
+    grid_x  = ((drawable_width / 2) - ((GRID_DIM * scale_x) / 2)) ;
+    grid_y = ((drawable_height / 2) - ((GRID_DIM * scale_x) / 2)) ;
+    int grid_dim_scaled = GRID_DIM * scale_x;
+
+    printf("scale_x, scale y -> (%f, %f) \n grid_x, grid_y -> (%d, %d)\n", scale_x, scale_y, grid_x, grid_y);
 
     SDL_Event event;
     int quit = 0;
@@ -158,17 +176,19 @@ int main(){
 
         SDL_RenderClear(render);
 
-        render_grid(render, grid_x, grid_y);
+        //render_grid(render, grid_x, grid_y, grid_dim_scaled);
 
-        render_snake(render, grid_x, grid_y);
+        render_grid(render, grid_x, grid_y, scale_x);
 
-        draw_apple(render, grid_x, grid_x);
+        render_snake(render, grid_x, grid_y, scale_x);
+
+        draw_apple(render, grid_x, grid_x, scale_x);
 
         SDL_SetRenderDrawColor(render, 0x00, 0x00, 0x00, 0x00);
 
         SDL_RenderPresent(render);
 
-        SDL_Delay(100);
+        SDL_Delay(150);
 
     }
 
@@ -180,17 +200,27 @@ int main(){
     return 0;
 }
 
-void render_grid(SDL_Renderer* renderer, int x, int y){
+// void render_grid(SDL_Renderer* renderer, int x, int y, int dim) {
+//     SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+//     for (int i = 0; i <= GRID_SIZE; i++) {
+//         // Scaled lines
+//         SDL_RenderDrawLine(renderer, x, y + i * (dim / GRID_SIZE), x + dim, y + i * (dim / GRID_SIZE));
+//         SDL_RenderDrawLine(renderer, x + i * (dim / GRID_SIZE), y, x + i * (dim / GRID_SIZE), y + dim);
+//     }
+// }
+
+
+void render_grid(SDL_Renderer* renderer, int x, int y, int scale_factor){
     
     SDL_SetRenderDrawColor(renderer, 0x55, 0x55, 0x55, 0x55);
     SDL_Rect cell;
-    cell.h = CELL_SIZE;
-    cell.w = CELL_SIZE;
+    cell.h = CELL_SIZE * scale_factor;
+    cell.w = CELL_SIZE * scale_factor;
 
-    for(int i = 0; i < GRID_SIZE; i++){
+    for(int i = 0; i < GRID_SIZE ; i++){
         for(int j = 0; j < GRID_SIZE; j++){
-            cell.x = x + (i * CELL_SIZE);
-            cell.y = y + (j * CELL_SIZE);
+            cell.x = x + (i * CELL_SIZE) * scale_factor;
+            cell.y = y + (j * CELL_SIZE) * scale_factor;
             SDL_RenderDrawRect(renderer, &cell);
         }
     }
@@ -201,7 +231,7 @@ void init_snake(){
     snakePtr new = malloc(sizeof(Snake));
     new->x = rand() % (GRID_SIZE/2) + (GRID_SIZE / 4 );
     new->y = 1;
-    new->dir = SNAKE_UP;
+    new->dir = rand() % SNAKE_LEFT;
     new->next = NULL;
 
     head = new;
@@ -223,10 +253,10 @@ void increase_snake(){
     
 }
 
-void render_snake(SDL_Renderer* renderer, int x, int y){
+void render_snake(SDL_Renderer* renderer, int x, int y, int scale_factor){
     SDL_SetRenderDrawColor(renderer,0x00, 0xff, 0x00, 255 );
 
-    int seg_size = GRID_DIM / GRID_SIZE  ;
+    int seg_size = (GRID_DIM / GRID_SIZE) * scale_factor  ;
     SDL_Rect seg;
     seg.w = seg_size;
     seg.h = seg_size;
@@ -285,14 +315,14 @@ void gen_apple(){
 
 }
 
-void draw_apple(SDL_Renderer* renderer, int x, int y){
+void draw_apple(SDL_Renderer* renderer, int x, int y, int scale_factor){
     SDL_SetRenderDrawColor(renderer, 0xff, 0x00, 0x00, 255);
     //gen_apple();
     SDL_Rect ball;
-    ball.x = x + newBall.x * CELL_SIZE;
-    ball.y = y + newBall.y * CELL_SIZE;
-    ball.h = CELL_SIZE;
-    ball.w = CELL_SIZE;
+    ball.x = x + (newBall.x * CELL_SIZE) * scale_factor;
+    ball.y = y + (newBall.y * CELL_SIZE) * scale_factor;
+    ball.h = CELL_SIZE * scale_factor;
+    ball.w = CELL_SIZE * scale_factor;
 
     SDL_RenderFillRect(renderer, &ball);
 }
