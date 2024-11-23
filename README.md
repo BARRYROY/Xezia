@@ -4,5 +4,5 @@ Snake Game using SDL library
 # Run 
 make run
 
-#TODO
+# TODO
 make it cross platform 
