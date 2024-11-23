@@ -27,6 +27,8 @@ int main(){
         return 1;
     }
 
+    SDL_SetWindowSize(window, 1000, 1000);
+
     int drawable_width, drawable_height;
     SDL_GL_GetDrawableSize(window, &drawable_width, &drawable_height);
 
@@ -46,7 +48,9 @@ int main(){
 
     printf("Game is running ...\n");
 
-    SDL_SetRenderDrawColor(render,0x11, 0x11,0x11, 0x11);
+    Uint8 alpha = (Uint8)(0.0667 * 255);
+
+    SDL_SetRenderDrawColor(render,0x11, 0x11,0x11, alpha);
 
     SDL_RenderClear(render);
 
@@ -59,7 +63,6 @@ int main(){
     grid_x  = ((drawable_width / 2) - ((GRID_DIM * scale_x) / 2)) ;
     grid_y = ((drawable_height / 2) - ((GRID_DIM * scale_x) / 2)) ;
     //int grid_dim_scaled = GRID_DIM * scale_x; keeping this if i might need it
-
     printf("scale_x, scale y -> (%f, %f) \n grid_x, grid_y -> (%d, %d)\n", scale_x, scale_y, grid_x, grid_y);
 
     SDL_Event event;
@@ -111,9 +114,15 @@ int main(){
             }
         }
 
-        move_snake();
+        
+
+        //render_score(render, ((GRID_DIM * scale_x) / 6) , ((GRID_DIM * scale_x) / 2), scale_x);
+
+        snake_ai();
 
         detect_apple();
+
+        move_snake();
         
         detect_crash();
 
@@ -127,11 +136,15 @@ int main(){
 
         render_apple(render, grid_x, grid_x, scale_x); 
 
+        render_apple(render, grid_x, grid_x, scale_x); 
+
+        render_score(render, grid_x , grid_x, scale_x);
+
         SDL_SetRenderDrawColor(render, 0x00, 0x00, 0x00, 0x00);
 
         SDL_RenderPresent(render);
 
-        SDL_Delay(95);
+        SDL_Delay(DELAY);
 
     }
 
@@ -155,7 +168,7 @@ int main(){
 
 void render_grid(SDL_Renderer* renderer, int x, int y, int scale_factor){
     
-    SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0x00, 0xFF); //0x55, 0x55, 0x55, 0x55);
+    SDL_SetRenderDrawColor(renderer, 0xFF, 255, 255, 255); //0x55, 0x55, 0x55, 0x55);
 #if 0    
     SDL_Rect cell;
     cell.h = CELL_SIZE * scale_factor;
@@ -189,6 +202,10 @@ void init_snake(){
     tail = new;
 }
 
+void init_score(){
+    scoring = 0;
+}
+
 void increase_snake(){
     snakePtr new = malloc(sizeof(Snake));
     if (!new) {
@@ -206,19 +223,37 @@ void increase_snake(){
 }
 
 void render_snake(SDL_Renderer* renderer, int x, int y, int scale_factor){
-    SDL_SetRenderDrawColor(renderer,0x00, 0xff, 0x00, 255 );
 
     int seg_size = (GRID_DIM / GRID_SIZE) * scale_factor  ;
     SDL_Rect seg;
-    seg.w = seg_size;
-    seg.h = seg_size;
+    seg.w = seg_size - 4;
+    seg.h = seg_size - 4 ; 
+
+    int bright = 255;
+    Uint8 dull = 0x00;
+    int b_dir = 0;
 
     snakePtr track  = head;
     while(track != NULL){
-        seg.x = x + (track->x * seg_size);
-        seg.y = y + (track->y * seg_size);
+        SDL_SetRenderDrawColor(renderer,0x00, bright, dull, 255 );
+        seg.x = x + (track->x * seg_size + 2);
+        seg.y = y + (track->y * seg_size + 2);
         SDL_RenderFillRect(renderer, &seg);
         track = track->next;
+
+        if(b_dir == 0) {
+            bright = bright - 15;
+            if(bright < 50){
+                b_dir = 1;
+                bright = dull;
+            } 
+        }
+        if(b_dir == 1){
+            bright = bright + 50;
+            if(bright > 250){
+                b_dir = 0;
+            }
+        }
     }
 
 }
@@ -292,6 +327,7 @@ void render_apple(SDL_Renderer* renderer, int x, int y, int scale_factor){
     Uint8 b = 0x00; 
     Uint8 a = 0xFF;        
 
+    
     SDL_SetRenderDrawColor(renderer, r, g, b, a);
     SDL_Rect ball;
     ball.x = x + (newBall.x * CELL_SIZE * scale_factor);
@@ -308,6 +344,7 @@ void detect_apple(){
     if( (head->x == newBall.x ) &&(head->y == newBall.y)){ //asssignment ! comparison was the bug distorting the game we are now good
         gen_apple();
         increase_snake();
+        //update_score();
     }
 }
 
@@ -318,17 +355,21 @@ void detect_crash(){
         reset_snake();
 
     }
+    /* snake crashing into the tail */
+    if(head->x == tail->x && head->y == tail->y){
+        /* todo show menu , quit */
+        reset_snake();
+    }
 }
+
+/* todo change escape to pause game instead of quiting */
 
 void reset_snake(){
 
     snakePtr track = head;
-    snakePtr temp;
 
     while(track != NULL){
-        temp = track->next;
         track = track->next;
-        free(temp);
     }
 
     init_snake();
@@ -336,3 +377,194 @@ void reset_snake(){
     increase_snake();
     gen_apple();
 }
+
+void snake_ai(){
+    int try_l = game_status(TRY_LEFT);
+    int try_r = game_status(TRY_RIGHT);
+    int try_f = game_status(TRY_FOWARD);
+
+    if(try_f >= try_l && try_f >= try_r){
+        //forward
+        //move_snake();
+    }else {
+        if(try_l > try_r) {
+            turn_left();
+        }else{
+            turn_right();
+        }
+    }
+}
+
+void turn_left(){
+
+    switch(head->dir){
+        case SNAKE_DOWN:
+            head->dir = SNAKE_RIGHT;
+            break;
+        case SNAKE_UP:
+            head->dir = SNAKE_LEFT;
+            break;
+        case SNAKE_LEFT:
+            head->dir = SNAKE_DOWN;
+            break;
+        case SNAKE_RIGHT:
+            head->dir = SNAKE_UP;
+            break;
+    }
+}
+
+void turn_right(){
+
+    switch(head->dir){
+        case SNAKE_DOWN:
+            head->dir = SNAKE_LEFT;
+            break;
+        case SNAKE_UP:
+            head->dir = SNAKE_RIGHT;
+            break;
+        case SNAKE_LEFT:
+            head->dir = SNAKE_UP;
+            break;
+        case SNAKE_RIGHT:
+            head->dir = SNAKE_DOWN;
+            break;
+    }
+}
+
+
+int game_status(int try){
+
+    int ret = 0;
+    int try_x = head->x;
+    int try_y = head->y;
+
+    switch(head->dir){
+        case SNAKE_DOWN:
+            switch(try){
+                case TRY_FOWARD:
+                    try_y ++;
+                    break;
+                case TRY_LEFT:
+                    try_x++;
+                    // ret = -100;
+                    break;
+                case TRY_RIGHT:
+                    try_x--;
+                    // ret = 100;
+                    break;
+            }
+            break;
+        case SNAKE_UP:
+            switch(try){
+                case TRY_FOWARD:
+                    try_y--;
+                    // ret = 1;
+                    break;
+                case TRY_LEFT:
+                    try_x--;
+                    // ret = 1;
+                    break;
+                case TRY_RIGHT:
+                    try_x++;
+                    // ret = 1;
+                    break;
+            }
+            break;
+        case SNAKE_LEFT:
+            switch(try){
+                case TRY_FOWARD:
+                    try_x--;
+                    // ret = 1;
+                    break;
+                case TRY_LEFT:
+                    try_y++;
+                    // ret = 1;
+                    break;
+                case TRY_RIGHT:
+                    try_y--;
+                    // ret = 1;
+                    break;
+            }
+            break;
+        case SNAKE_RIGHT:
+            switch(try){
+                case TRY_FOWARD:
+                    try_x++;
+                    // ret = 1;
+                    break;
+                case TRY_LEFT:
+                    try_y--;
+                    // ret = 1;
+                    break;
+                case TRY_RIGHT:
+                    try_y++;
+                    // ret = 1;
+                    break;
+            }
+            break;
+    }
+    
+    /* detect crah to the wall */
+    if((try_x < 0 || try_x > GRID_SIZE - 1 ) || 
+       (try_y < 0 || try_y > GRID_SIZE - 1 )){
+        ret += -100;
+    }
+
+    /* detect newBall */
+    if(try_x == newBall.x && try_y == newBall.y){
+        ret += 100;
+    }
+
+    /* get closer to the ball */
+    int diff_x = abs(head->x - newBall.x);
+    int diff_y = abs(head->y - newBall.y) ;
+    int diff_try_x = abs(head->x - try_x) ;
+    int diff_try_y = abs(head->x - try_y) ;
+
+    if(diff_try_x < diff_x || diff_try_y < diff_y){
+        ret += 5;
+    } 
+
+    /* detect tail */
+    //  snakePtr track = head->next;
+
+    // while(track != NULL){
+    //     if((track->x != try_x) && (track->y != try_y)){
+    //         ret += -50;
+    //     }
+    //     track = track->next;
+    // }
+
+    // if(track->next != NULL){
+    //     track = track->next;
+    // }
+    // while(track != NULL){
+    //     if(try_x == track->x && try_y == track->y){
+    //     ret += -50;
+    //     }
+    // }
+
+    return ret;
+
+}
+
+void update_score(){
+
+}
+
+void render_score(SDL_Renderer* renderer, int x, int y, int scale_factor){
+    
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255 );
+    SDL_Rect score_board;
+    int score_size =  (CELL_SIZE * scale_factor)* 2;
+    score_board.h = score_size;
+    score_board.w = score_size;
+    score_board.x = x - 50 ;
+    score_board.y = y  - 200;
+
+    init_score();
+
+    SDL_RenderFillRect(renderer, &score_board);
+
+}
+

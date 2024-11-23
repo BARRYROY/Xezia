@@ -16,9 +16,14 @@
 #define SCREEN_Y 0
 #endif
 
-#define GRID_SIZE 20
+#define GRID_SIZE 36
 #define GRID_DIM 500
 #define CELL_SIZE (GRID_DIM / GRID_SIZE)
+#define SCORE_X_POS 80
+#define SCORE_Y_POS 80
+#define DELAY 15
+
+int scoring ;
 
 typedef struct snake{
     int x;
@@ -32,6 +37,12 @@ typedef struct ball{
     int y;
 }Ball;
 
+typedef struct score {
+    int x;
+    int y;
+}Score;
+
+Score newScore;
 Ball newBall;
 typedef Snake* snakePtr;
 
@@ -43,10 +54,14 @@ enum{
     SNAKE_UP,
     SNAKE_DOWN,
     SNAKE_RIGHT,
-    SNAKE_LEFT,
-    
+    SNAKE_LEFT,    
 }Direction;
 
+enum{
+    TRY_FOWARD,
+    TRY_LEFT,
+    TRY_RIGHT
+}State;
 
 void init_snake();
 void increase_snake();
@@ -58,3 +73,10 @@ void gen_apple();
 void detect_apple();
 void detect_crash();
 void reset_snake();
+void snake_ai();
+void turn_left();
+void turn_right();
+int game_status(int);
+void update_score();
+void render_score(SDL_Renderer* renderer, int x, int y, int scale_factor);
+snakePtr reverseList(snakePtr head);
