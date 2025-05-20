@@ -1,8 +1,12 @@
+#ifndef RENDER_H
+#define RENDER_H
 #include <stdio.h>
-#include "/opt/homebrew/Cellar/sdl2/2.30.8/include/SDL2/SDL.h"
+#include "/opt/homebrew/Cellar/sdl2/2.32.4/include/SDL2/SDL.h"
 #include <time.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include "/opt/homebrew/Cellar/sdl2_ttf/2.24.0/include/SDL2/SDL_ttf.h"
+
 
 #if 0
 #define SCREEN_WIDTH 1200
@@ -21,9 +25,23 @@
 #define CELL_SIZE (GRID_DIM / GRID_SIZE)
 #define SCORE_X_POS 80
 #define SCORE_Y_POS 80
-#define DELAY 15
+#define DELAY 70
+#define DELAY_TIME 3000
 
-int scoring ;
+/*todo*/
+/*making it cross platform */
+/*scaling factor in MacOs retina display shoulf be compiled only for MAC_OS*/
+#ifndef WIN_API
+#define WIN_API
+#endif
+
+extern int delay ;
+extern int scoring;
+extern char score_update[32];
+extern TTF_Font *font ;
+extern char * game_name;
+extern int mode ;
+enum playmode{PLAY, AI};
 
 typedef struct snake{
     int x;
@@ -80,3 +98,10 @@ int game_status(int);
 void update_score();
 void render_score(SDL_Renderer* renderer, int x, int y, int scale_factor);
 snakePtr reverseList(snakePtr head);
+void renderScore(SDL_Renderer* screen, int scoring_x, int scoring_y, int scale_factor, TTF_Font*);
+void loadFont();
+void renderGameName(SDL_Renderer* screen, int , int , int scale_factor,TTF_Font*);
+//void rewardPoints();
+void init_score();
+
+ #endif
